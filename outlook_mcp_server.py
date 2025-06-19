@@ -32,7 +32,15 @@ def get_folder_by_name(namespace, folder_name: str):
         for folder in inbox.Folders:
             if folder.Name.lower() == folder_name.lower():
                 return folder
-                
+            # Also check subfolders in level 2
+            for subfolder in folder.Folders:
+                if subfolder.Name.lower() == folder_name.lower():
+                    return subfolder   
+                # Also check subfolders in level 3
+                for subfolder2 in subfolder.Folders:
+                    if subfolder2.Name.lower() == folder_name.lower():
+                        return subfolder2               
+        
         # Then check all folders at root level
         for folder in namespace.Folders:
             if folder.Name.lower() == folder_name.lower():
