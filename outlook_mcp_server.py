@@ -447,6 +447,94 @@ def compose_email(recipient_email: str, subject: str, body: str, cc_email: Optio
     except Exception as e:
         return f"Error sending email: {str(e)}"
 
+@mcp.tool()
+def create_folder(folder_name: str, parent_folder: Optional[str] = None) -> str:
+    """
+    Create a new email folder in Outlook
+    
+    Args:
+        folder_name: Name of the new folder to create
+        parent_folder: Name of the parent folder (if not specified, creates in the root of the mailbox)
+        
+    Returns:
+        Status message indicating success or failure
+    """
+    try:
+        # Connect to Outlook
+        _, namespace = connect_to_outlook()
+        
+        # Get the parent folder
+        if parent_folder:
+            parent = get_folder_by_name(namespace, parent_folder)
+            if not parent:
+                return f"Error: Parent folder '{parent_folder}' not found"
+        else:
+            # Use the root mailbox folder (typically the first folder which is the mailbox)
+            parent = namespace.Folders[0]  # First folder is usually the mailbox
+        
+        # Check if folder already exists
+        try:
+            for existing_folder in parent.Folders:
+                if existing_folder.Name.lower() == folder_name.lower():
+                    return f"Error: Folder '{folder_name}' already exists in '{parent.Name}'"
+        except Exception:
+            pass
+        
+        # Create the new folder
+        parent.Folders.Add(folder_name)
+        
+        parent_display = f"'{parent_folder}'" if parent_folder else f"root mailbox ('{parent.Name}')"
+        return f"Folder '{folder_name}' created successfully in {parent_display}"
+    
+    except Exception as e:
+        return f"Error creating folder: {str(e)}"
+
+@mcp.tool()
+def move_email_to_folder(email_number: int, folder_name: str) -> str:
+    """
+    Move a specific email by its number to a different folder
+    
+    Args:
+        email_number: The number of the email from the list results
+        folder_name: Name of the destination folder
+        
+    Returns:
+        Status message indicating success or failure
+    """
+    try:
+        if not email_cache:
+            return "Error: No emails have been listed yet. Please use list_recent_emails or search_emails first."
+        
+        if email_number not in email_cache:
+            return f"Error: Email #{email_number} not found in the current listing."
+        
+        email_id = email_cache[email_number]["id"]
+        
+        # Connect to Outlook
+        _, namespace = connect_to_outlook()
+        
+        # Retrieve the specific email
+        email = namespace.GetItemFromID(email_id)
+        if not email:
+            return f"Error: Email #{email_number} could not be retrieved from Outlook."
+        
+        # Get the destination folder
+        destination_folder = get_folder_by_name(namespace, folder_name)
+        if not destination_folder:
+            return f"Error: Destination folder '{folder_name}' not found"
+        
+        # Move the email
+        email.Move(destination_folder)
+        
+        # Remove from cache since it's moved
+        email_subject = email_cache[email_number]["subject"]
+        del email_cache[email_number]
+        
+        return f"Email '{email_subject}' moved successfully to folder '{folder_name}'"
+    
+    except Exception as e:
+        return f"Error moving email: {str(e)}"
+
 # Run the server
 if __name__ == "__main__":
     print("Starting Outlook MCP Server...")

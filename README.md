@@ -10,6 +10,8 @@ A Model Context Protocol (MCP) server that provides access to Microsoft Outlook 
 - **Email Details**: View complete email content, including attachments
 - **Email Composition**: Create and send new emails
 - **Email Replies**: Reply to existing emails
+- **Folder Creation**: Create new email folders for organization
+- **Email Organization**: Move emails between folders
 
 ## Prerequisites
 
@@ -70,6 +72,8 @@ The server provides the following tools:
 4. `get_email_by_number`: Retrieves detailed content of a specific email
 5. `reply_to_email_by_number`: Replies to a specific email
 6. `compose_email`: Creates and sends a new email
+7. `create_folder`: Creates a new email folder for organization
+8. `move_email_to_folder`: Moves a specific email to a different folder
 
 ### Example Workflow
 
@@ -104,6 +108,16 @@ Reply to email #3 with: "Thanks for the information. I'll review this and get ba
 ### Composing a New Email
 ```
 Send an email to john.doe@example.com with subject "Meeting Agenda" and body "Here's the agenda for our upcoming meeting..."
+```
+
+### Creating Email Folders
+```
+Create a new folder called "Important Projects" in my Inbox
+```
+
+### Organizing Emails
+```
+Move email #5 to the "Archive" folder
 ```
 
 ## Troubleshooting
