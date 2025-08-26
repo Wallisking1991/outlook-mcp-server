@@ -586,233 +586,230 @@ def move_email_to_folder(email_number: int, folder_name: str) -> str:
         return f"Error moving email: {str(e)}"
 
 
-@mcp.tool()
-def list_rules() -> str:
-    """
-    List all existing Outlook rules
+# ==============================================================================
+# OUTLOOK RULES FUNCTIONALITY - CURRENTLY DISABLED
+# ==============================================================================
+# The following code for managing Outlook rules is currently commented out
+# as it does not work reliably with all Outlook configurations.
+# This functionality may be enabled in a future version.
 
-    Returns:
-        A list of all current rules with their basic information
-    """
-    try:
-        # Connect to Outlook
-        outlook, namespace = connect_to_outlook()
-
-        # Get the rules collection
-        rules = outlook.Session.DefaultStore.GetRules()
-
-        if rules.Count == 0:
-            return "No rules found in Outlook."
-
-        result = f"Found {rules.Count} rule(s) in Outlook:\n\n"
-
-        for i in range(1, rules.Count + 1):
-            rule = rules.Item(i)
-            result += f"Rule #{i}: {rule.Name}\n"
-            result += f"  Enabled: {'Yes' if rule.Enabled else 'No'}\n"
-            result += f"  Execution Order: {rule.ExecutionOrder}\n"
-
-            # Get rule type
-            if hasattr(rule, "RuleType"):
-                rule_types = {1: "Receive", 2: "Send"}
-                result += f"  Type: {rule_types.get(rule.RuleType, 'Unknown')}\n"
-
-            result += "\n"
-
-        return result
-
-    except Exception as e:
-        return f"Error listing rules: {str(e)}"
-
-
-@mcp.tool()
-def create_rule(
-    rule_name: str,
-    sender_contains: Optional[str] = None,
-    subject_contains: Optional[str] = None,
-    move_to_folder: Optional[str] = None,
-    mark_as_read: bool = False,
-    delete_email: bool = False,
-    forward_to: Optional[str] = None,
-) -> str:
-    """
-    Create a new Outlook rule for incoming emails
-
-    Args:
-        rule_name: Name for the new rule
-        sender_contains: Text that must be contained in sender's email/name (optional)
-        subject_contains: Text that must be contained in the subject (optional)
-        move_to_folder: Name of folder to move matching emails to (optional)
-        mark_as_read: Whether to mark matching emails as read (default: False)
-        delete_email: Whether to delete matching emails (default: False)
-        forward_to: Email address to forward matching emails to (optional)
-
-    Returns:
-        Status message indicating success or failure
-    """
-    try:
-        if not sender_contains and not subject_contains:
-            return "Error: At least one condition (sender_contains or subject_contains) must be specified"
-
-        if (
-            not move_to_folder
-            and not mark_as_read
-            and not delete_email
-            and not forward_to
-        ):
-            return "Error: At least one action (move_to_folder, mark_as_read, delete_email, or forward_to) must be specified"
-
-        # Connect to Outlook
-        outlook, namespace = connect_to_outlook()
-
-        # Get the rules collection
-        rules = outlook.Session.DefaultStore.GetRules()
-
-        # Check if rule name already exists
-        for i in range(1, rules.Count + 1):
-            if rules.Item(i).Name.lower() == rule_name.lower():
-                return f"Error: A rule named '{rule_name}' already exists"
-
-        # Create a new rule
-        rule = rules.Create(rule_name, 1)  # 1 = olRuleReceive (for incoming emails)
-
-        # Set conditions
-        conditions = rule.Conditions
-
-        if sender_contains:
-            # Condition: Sender contains specific text
-            sender_condition = conditions.SenderAddress
-            sender_condition.Enabled = True
-            sender_condition.Address = [sender_contains]
-
-        if subject_contains:
-            # Condition: Subject contains specific text
-            subject_condition = conditions.Subject
-            subject_condition.Enabled = True
-            subject_condition.Text = [subject_contains]
-
-        # Set actions
-        actions = rule.Actions
-
-        if move_to_folder:
-            # Action: Move to folder
-            destination_folder = get_folder_by_name(namespace, move_to_folder)
-            if not destination_folder:
-                return f"Error: Destination folder '{move_to_folder}' not found"
-
-            move_action = actions.MoveToFolder
-            move_action.Enabled = True
-            move_action.Folder = destination_folder
-
-        if mark_as_read:
-            # Action: Mark as read
-            read_action = actions.MarkAsRead
-            read_action.Enabled = True
-
-        if delete_email:
-            # Action: Delete
-            delete_action = actions.Delete
-            delete_action.Enabled = True
-
-        if forward_to:
-            # Action: Forward to email address
-            forward_action = actions.Forward
-            forward_action.Enabled = True
-            forward_action.Recipients.Add(forward_to)
-
-        # Enable the rule
-        rule.Enabled = True
-
-        # Save the rules
-        rules.Save()
-
-        # Build summary of what was created
-        summary = f"Rule '{rule_name}' created successfully!\n\nConditions:\n"
-        if sender_contains:
-            summary += f"- Sender contains: '{sender_contains}'\n"
-        if subject_contains:
-            summary += f"- Subject contains: '{subject_contains}'\n"
-
-        summary += "\nActions:\n"
-        if move_to_folder:
-            summary += f"- Move to folder: '{move_to_folder}'\n"
-        if mark_as_read:
-            summary += "- Mark as read\n"
-        if delete_email:
-            summary += "- Delete email\n"
-        if forward_to:
-            summary += f"- Forward to: '{forward_to}'\n"
-
-        return summary
-
-    except Exception as e:
-        return f"Error creating rule: {str(e)}"
-
-
-@mcp.tool()
-def delete_rule(rule_name: str) -> str:
-    """
-    Delete an existing Outlook rule by name
-
-    Args:
-        rule_name: Name of the rule to delete
-
-    Returns:
-        Status message indicating success or failure
-    """
-    try:
-        # Connect to Outlook
-        outlook, namespace = connect_to_outlook()
-
-        # Get the rules collection
-        rules = outlook.Session.DefaultStore.GetRules()
-
-        # Find and delete the rule
-        for i in range(1, rules.Count + 1):
-            rule = rules.Item(i)
-            if rule.Name.lower() == rule_name.lower():
-                rule.Delete()
-                rules.Save()
-                return f"Rule '{rule_name}' deleted successfully"
-
-        return f"Error: Rule '{rule_name}' not found"
-
-    except Exception as e:
-        return f"Error deleting rule: {str(e)}"
-
-
-@mcp.tool()
-def enable_disable_rule(rule_name: str, enabled: bool) -> str:
-    """
-    Enable or disable an existing Outlook rule
-
-    Args:
-        rule_name: Name of the rule to enable/disable
-        enabled: True to enable, False to disable
-
-    Returns:
-        Status message indicating success or failure
-    """
-    try:
-        # Connect to Outlook
-        outlook, namespace = connect_to_outlook()
-
-        # Get the rules collection
-        rules = outlook.Session.DefaultStore.GetRules()
-
-        # Find and modify the rule
-        for i in range(1, rules.Count + 1):
-            rule = rules.Item(i)
-            if rule.Name.lower() == rule_name.lower():
-                rule.Enabled = enabled
-                rules.Save()
-                status = "enabled" if enabled else "disabled"
-                return f"Rule '{rule_name}' {status} successfully"
-
-        return f"Error: Rule '{rule_name}' not found"
-
-    except Exception as e:
-        return f"Error modifying rule: {str(e)}"
+# @mcp.tool()
+# def list_rules() -> str:
+#     """
+#     List all existing Outlook rules
+#
+#     Returns:
+#         A list of all current rules with their basic information
+#     """
+#     try:
+#         # Connect to Outlook
+#         outlook, namespace = connect_to_outlook()
+#
+#         # Get the rules collection
+#         rules = outlook.Session.DefaultStore.GetRules()
+#
+#         if rules.Count == 0:
+#             return "No rules found in Outlook."
+#
+#         result = f"Found {rules.Count} rule(s) in Outlook:\n\n"
+#
+#         for i in range(1, rules.Count + 1):
+#             rule = rules.Item(i)
+#             result += f"Rule #{i}: {rule.Name}\n"
+#             result += f"  Enabled: {'Yes' if rule.Enabled else 'No'}\n"
+#             result += f"  Execution Order: {rule.ExecutionOrder}\n"
+#
+#             # Get rule type
+#             if hasattr(rule, "RuleType"):
+#                 rule_types = {1: "Receive", 2: "Send"}
+#                 result += f"  Type: {rule_types.get(rule.RuleType, 'Unknown')}\n"
+#
+#             result += "\n"
+#
+#         return result
+#
+#     except Exception as e:
+#         return f"Error listing rules: {str(e)}"
+#
+#
+# @mcp.tool()
+# def create_rule(rule_name: str, sender_contains: Optional[str] = None,
+#                 subject_contains: Optional[str] = None, move_to_folder: Optional[str] = None,
+#                 mark_as_read: bool = False, delete_email: bool = False,
+#                 forward_to: Optional[str] = None) -> str:
+#     """
+#     Create a new Outlook rule for incoming emails
+#
+#     Args:
+#         rule_name: Name for the new rule
+#         sender_contains: Text that must be contained in sender's email/name (optional)
+#         subject_contains: Text that must be contained in the subject (optional)
+#         move_to_folder: Name of folder to move matching emails to (optional)
+#         mark_as_read: Whether to mark matching emails as read (default: False)
+#         delete_email: Whether to delete matching emails (default: False)
+#         forward_to: Email address to forward matching emails to (optional)
+#
+#     Returns:
+#         Status message indicating success or failure
+#     """
+#     try:
+#         if not sender_contains and not subject_contains:
+#             return "Error: At least one condition (sender_contains or subject_contains) must be specified"
+#
+#         if not move_to_folder and not mark_as_read and not delete_email and not forward_to:
+#             return "Error: At least one action (move_to_folder, mark_as_read, delete_email, or forward_to) must be specified"
+#
+#         # Connect to Outlook
+#         outlook, namespace = connect_to_outlook()
+#
+#         # Get the rules collection
+#         rules = outlook.Session.DefaultStore.GetRules()
+#
+#         # Check if rule name already exists
+#         for i in range(1, rules.Count + 1):
+#             if rules.Item(i).Name.lower() == rule_name.lower():
+#                 return f"Error: A rule named '{rule_name}' already exists"
+#
+#         # Create a new rule
+#         rule = rules.Create(rule_name, 1)  # 1 = olRuleReceive (for incoming emails)
+#
+#         # Set conditions
+#         conditions = rule.Conditions
+#
+#         if sender_contains:
+#             # Condition: Sender contains specific text
+#             sender_condition = conditions.SenderAddress
+#             sender_condition.Enabled = True
+#             sender_condition.Address = [sender_contains]
+#
+#         if subject_contains:
+#             # Condition: Subject contains specific text
+#             subject_condition = conditions.Subject
+#             subject_condition.Enabled = True
+#             subject_condition.Text = [subject_contains]
+#
+#         # Set actions
+#         actions = rule.Actions
+#
+#         if move_to_folder:
+#             # Action: Move to folder
+#             destination_folder = get_folder_by_name(namespace, move_to_folder)
+#             if not destination_folder:
+#                 return f"Error: Destination folder '{move_to_folder}' not found"
+#
+#             move_action = actions.MoveToFolder
+#             move_action.Enabled = True
+#             move_action.Folder = destination_folder
+#
+#         if mark_as_read:
+#             # Action: Mark as read
+#             read_action = actions.MarkAsRead
+#             read_action.Enabled = True
+#
+#         if delete_email:
+#             # Action: Delete
+#             delete_action = actions.Delete
+#             delete_action.Enabled = True
+#
+#         if forward_to:
+#             # Action: Forward to email address
+#             forward_action = actions.Forward
+#             forward_action.Enabled = True
+#             forward_action.Recipients.Add(forward_to)
+#
+#         # Enable the rule
+#         rule.Enabled = True
+#
+#         # Save the rules
+#         rules.Save()
+#
+#         # Build summary of what was created
+#         summary = f"Rule '{rule_name}' created successfully!\n\nConditions:\n"
+#         if sender_contains:
+#             summary += f"- Sender contains: '{sender_contains}'\n"
+#         if subject_contains:
+#             summary += f"- Subject contains: '{subject_contains}'\n"
+#
+#         summary += "\nActions:\n"
+#         if move_to_folder:
+#             summary += f"- Move to folder: '{move_to_folder}'\n"
+#         if mark_as_read:
+#             summary += "- Mark as read\n"
+#         if delete_email:
+#             summary += "- Delete email\n"
+#         if forward_to:
+#             summary += f"- Forward to: '{forward_to}'\n"
+#
+#         return summary
+#
+#     except Exception as e:
+#         return f"Error creating rule: {str(e)}"
+#
+#
+# @mcp.tool()
+# def delete_rule(rule_name: str) -> str:
+#     """
+#     Delete an existing Outlook rule by name
+#
+#     Args:
+#         rule_name: Name of the rule to delete
+#
+#     Returns:
+#         Status message indicating success or failure
+#     """
+#     try:
+#         # Connect to Outlook
+#         outlook, namespace = connect_to_outlook()
+#
+#         # Get the rules collection
+#         rules = outlook.Session.DefaultStore.GetRules()
+#
+#         # Find and delete the rule
+#         for i in range(1, rules.Count + 1):
+#             rule = rules.Item(i)
+#             if rule.Name.lower() == rule_name.lower():
+#                 rule.Delete()
+#                 rules.Save()
+#                 return f"Rule '{rule_name}' deleted successfully"
+#
+#         return f"Error: Rule '{rule_name}' not found"
+#
+#     except Exception as e:
+#         return f"Error deleting rule: {str(e)}"
+#
+#
+# @mcp.tool()
+# def enable_disable_rule(rule_name: str, enabled: bool) -> str:
+#     """
+#     Enable or disable an existing Outlook rule
+#
+#     Args:
+#         rule_name: Name of the rule to enable/disable
+#         enabled: True to enable, False to disable
+#
+#     Returns:
+#         Status message indicating success or failure
+#     """
+#     try:
+#         # Connect to Outlook
+#         outlook, namespace = connect_to_outlook()
+#
+#         # Get the rules collection
+#         rules = outlook.Session.DefaultStore.GetRules()
+#
+#         # Find and modify the rule
+#         for i in range(1, rules.Count + 1):
+#             rule = rules.Item(i)
+#             if rule.Name.lower() == rule_name.lower():
+#                 rule.Enabled = enabled
+#                 rules.Save()
+#                 status = "enabled" if enabled else "disabled"
+#                 return f"Rule '{rule_name}' {status} successfully"
+#
+#         return f"Error: Rule '{rule_name}' not found"
+#
+#     except Exception as e:
+#         return f"Error modifying rule: {str(e)}"
 
 
 # Run the server

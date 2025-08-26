@@ -12,7 +12,8 @@ A Model Context Protocol (MCP) server that provides access to Microsoft Outlook 
 - **Email Replies**: Reply to existing emails
 - **Folder Creation**: Create new email folders for organization
 - **Email Organization**: Move emails between folders
-- **Rules Management**: Create, list, enable/disable, and delete Outlook rules for automated email processing
+
+> **Note**: Rules management functionality does no
 
 ## Prerequisites
 
@@ -75,10 +76,8 @@ The server provides the following tools:
 6. `compose_email`: Creates and sends a new email
 7. `create_folder`: Creates a new email folder for organization
 8. `move_email_to_folder`: Moves a specific email to a different folder
-9. `list_rules`: Lists all existing Outlook rules
-10. `create_rule`: Creates a new Outlook rule for automated email processing
-11. `delete_rule`: Deletes an existing Outlook rule
-12. `enable_disable_rule`: Enables or disables an existing Outlook rule
+
+> **Note**: Rules management tools (`list_rules`, `create_rule`, `delete_rule`, `enable_disable_rule`) are currently disabled due to compatibility issues.
 
 ### Example Workflow
 
@@ -125,23 +124,6 @@ Create a new folder called "Important Projects" in my Inbox
 Move email #5 to the "Archive" folder
 ```
 
-### Managing Outlook Rules
-```
-List all my current Outlook rules
-```
-
-```
-Create a rule called "Marketing Emails" that moves emails containing "newsletter" in the subject to the "Marketing" folder and marks them as read
-```
-
-```
-Disable the rule named "Old Project Rule"
-```
-
-```
-Delete the rule called "Temporary Filter"
-```
-
 ## Troubleshooting
 
 - **Connection Issues**: Ensure Outlook is running and properly configured
@@ -160,6 +142,4 @@ This server has access to your Outlook email account and can read, send, and man
 - Maximum email history is limited to 30 days
 - Search capabilities depend on Outlook's built-in search functionality
 - Only supports basic email functions (no calendar, contacts, etc.)
-- Rules functionality requires Outlook to be running and properly configured
-- Rule creation supports basic conditions (sender, subject) and actions (move, mark as read, delete, forward)
-- Complex rule conditions and exceptions are not currently supported
+- Rules functionality is currently disabled due to compatibility issues with certain Outlook configurations
